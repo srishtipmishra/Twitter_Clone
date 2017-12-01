@@ -2,44 +2,38 @@ defmodule Twitter do
   use GenServer 
 
   def main(args) do
-    pid = start_main_server()
-
+    args |> parse_args
+    #pid = start_main_server()
+    #create_numbered_users(10)
     #create users 
-    users = [{"sri","mis"},{"abhi","mis"},{"karan","mis"},{"keyur","mis"},{"aru","mis"}]
-    Enum.each users, fn user-> username = elem(user,0) 
-                               password = elem(user,1) 
-                               create_user(username,password) 
-                     end
     
   end
 
-  #utility test funtions
+
+  def parse_args([]) do
+      IO.puts "No arguments given" 
+  end    
+
+
+  def parse_args(args) do
+      {_, [input], _} = OptionParser.parse(args)
+      
+      if(input=="server") do
+          start_main_server()
+      end
+
+      if(input=="client") do
+          User.main()  
+      end
+
+      IO.puts " Wrong input " 
+  end
+
   def start_main_server() do
     pid = MainServer.start_link()
+    IO.puts "Created Mainserevr with PID" 
+    IO.inspect pid
     pid
   end
 
-  def create_user(username,password) do
-    #access main server's user list to check if this user already exists
-    user_exists = MainServer.check_user(username)
-    if user_exists == false do
-      user_pid = User.start_link(username,password)
-      MainServer.create_user(user_pid)
-    end
-  end
-
-  def go_online(username,password) do 
-    user_state = MainServer.get_user_state(username)
-    User.go_online(user_state,username,password)
-  end
-
-  def validate_username(username) do
-    #(?=^.(3,20)$)
-    true = Regex.match?(~r/^[a-zA-Z][a-zA-Z0-9]*[._-]?[a-zA-Z0-9]/,"Srishti")
-  end
-  
-  def validate_password(password) do
-    true = Regex.match?(~r/^[a-zA-Z][a-zA-Z0-9]*[._-]?[a-zA-Z0-9]/,"Srishti")
-    #to do password regex
-  end
 end
