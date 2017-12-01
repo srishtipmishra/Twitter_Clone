@@ -53,8 +53,10 @@ defmodule User do
         #query on a hasgtag
         
         #go offline
-        offline("sri")
+        go_offline("sri")
         follow("sri","keyur")
+
+        IO.gets ""
     end
 
     def get_ip_addr do 
@@ -111,28 +113,30 @@ defmodule User do
     end
 
     def go_offline(username) do
-        
+        GenServer.call(String.to_atom(username), {:go_offline, {username}})
     end
 
     def handle_call({:go_offline,args},_from, my_state) do
-        #IO.puts "in go_offline wrapper"
+        IO.puts "in go_offline wrapper"
         username = elem(args,0)
         if pid = Process.whereis(String.to_atom(username)) != nil do
-        logout = GenServer.call({String.to_atom("mainserver"),String.to_atom("server@"<>get_ip_addr())}, {:go_offline, {username}})   
-        
-        if pid = Process.whereis(String.to_atom(username)) == nil do
-            IO.puts "Successfully logged out"
+            IO.puts "pid available"
+            logout = GenServer.call({String.to_atom("mainserver"),String.to_atom("server@"<>get_ip_addr())}, {:go_offline, {username}})   
+            IO.puts "check"
+            if pid = Process.whereis(String.to_atom(username)) == nil do
+                IO.puts "Successfully logged out"
+            else
+                IO.puts "could not log out"
+            end
         else
-            IO.puts "could not log out"
+            IO.puts "You're offline'"
         end
-        else
-        IO.puts "You're offline'"
-    end
     {:reply, my_state, my_state}
     end
 
     def retweet(tweet_id, username, my_name) do
-        User.retweet(tweet_id, username, my_name)
+        IO.puts "in retweet"
+        GenServer.call(String.to_atom(my_name),{:retweet,{tweet_id, username, my_name}})
     end
 
     def create_numbered_users(num_users) do
@@ -140,10 +144,10 @@ defmodule User do
         prefix = "user"
         username = prefix<>to_string(i)
         password = prefix<>to_string(i)
-        user_exists = MainServer.check_user(username)
+        user_exists = GenServer.call({String.to_atom("mainserver"),String.to_atom("server@"<>get_ip_addr())},{:check_user,{username}})
         if user_exists == false do
             user_pid = User.start_link(username,password)
-            MainServer.create_user(username)
+            user = GenServer.call({String.to_atom("mainserver"),String.to_atom("server@"<>get_ip_addr())}, {:add_new_user, {username, password}})
             IO.puts "user created" <> username
         end
         end
@@ -303,19 +307,22 @@ defmodule User do
 
     def handle_call({:retweet, args}, _from, my_state) do
         IO.puts "in retweet handle call"
-        username = elem(args,0)
-        tweet_id = elem(args,1)
+        username = elem(args,1)
+        tweet_id = elem(args,0)
         my_name = elem(args,2)
         tweet_list = Map.get(my_state,"tweets")
+        IO.puts "here"
         if List.first(tweet_list) == nil do
             last_tweet_id = -1 
         else
             last_tweet_id = elem(List.first(tweet_list),0)
         end
         new_tweet_id = last_tweet_id + 1
-
-        user_state = get_state(username)
-        tweets = GenServer.call(String.to_atom(username), {:get_tweets, user_state})
+        IO.puts "here2"
+        IO.inspect username
+        user_state = GenServer.call(String.to_atom(username),{:get_user_state, {}})
+        IO.puts "here3"
+        tweets = GenServer.call(String.to_atom(username), {:get_tweets, {user_state}})
         tweet = elem(Enum.at(Enum.reverse(tweets), tweet_id),1)
         IO.puts "printing tweet string before retweeting"
         IO.inspect tweet
@@ -375,7 +382,7 @@ defmodule User do
         my_state
     end
 
-    def handle_call({:get_user_state ,username},_from,my_state) do          
+    def handle_call({:get_user_state ,args},_from,my_state) do          
         {:reply,my_state,my_state}
     end
 

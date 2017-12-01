@@ -34,6 +34,7 @@ defmodule MainServer do
     end
 
     def handle_call({:get_user_state,args}, _from, my_state) do
+        IO.puts "in get user state mainserver"
         username = elem(args,0)
         IO.inspect my_state
         user_state = Map.get(my_state,"users")
